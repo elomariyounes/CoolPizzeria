@@ -1,5 +1,18 @@
 package com.graphaware.pizzeria.service;
 
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import javax.transaction.Transactional;
+
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+
 import com.graphaware.pizzeria.model.Pizza;
 import com.graphaware.pizzeria.model.PizzeriaUser;
 import com.graphaware.pizzeria.model.Purchase;
@@ -7,17 +20,6 @@ import com.graphaware.pizzeria.model.PurchaseState;
 import com.graphaware.pizzeria.repository.PizzeriaUserRepository;
 import com.graphaware.pizzeria.repository.PurchaseRepository;
 import com.graphaware.pizzeria.security.PizzeriaUserPrincipal;
-
-import javax.transaction.Transactional;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
 
 @Service
 public class PurchaseService {
@@ -114,25 +116,38 @@ public class PurchaseService {
         if (pizzas == null) {
             return 0.0;
         }
-        // buy a pineapple pizza, get 10% off the others
-        boolean applyPineappleDiscount = false;
-        for (Pizza pizza : pizzas) {
-            if (pizza.getToppings().contains("pineapple")) {
-                applyPineappleDiscount = true;
-            }
-        }
-        for (Pizza pizza : pizzas) {
-            if (pizza.getToppings().contains("pineapple")) {
-                totalPrice += pizza.getPrice();
-            }  else {
-                if (applyPineappleDiscount) {
-                        totalPrice += pizza.getPrice() *0.9;
-                } else {
-                    totalPrice += pizza.getPrice();
+        
+        // buy 3 pizzas get one free
+        if(pizzas.size() == 3){
+        	
+        	Double cheapestPrice = pizzas.stream().map(p-> p.getPrice()).sorted().collect(Collectors.toList()).get(0);
+        	for(Pizza p : pizzas)
+        		totalPrice += p.getPrice();
+        	totalPrice -= cheapestPrice;
+        	return totalPrice;        	
+        	
+        }else{
+        	// buy a pineapple pizza, get 10% off the others
+            boolean applyPineappleDiscount = false;
+            for (Pizza pizza : pizzas) {
+                if (pizza.getToppings().contains("pineapple")) {
+                    applyPineappleDiscount = true;
                 }
             }
+            for (Pizza pizza : pizzas) {
+                if (pizza.getToppings().contains("pineapple")) {
+                    totalPrice += pizza.getPrice();
+                }  else {
+                    if (applyPineappleDiscount) {
+                            totalPrice += pizza.getPrice() *0.9;
+                    } else {
+                        totalPrice += pizza.getPrice();
+                    }
+                }
+            }
+            return totalPrice;
         }
-        return totalPrice;
+                
     }
 
     @PreAuthorize("hasRole('PIZZA_MAKER')")
